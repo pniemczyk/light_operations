@@ -5,7 +5,7 @@ module LightOperations
     include ::ActiveSupport::Rescuable
     MissingDependency = Class.new(StandardError)
 
-    attr_reader :dependencies, :params, :subject, :bind_oject
+    attr_reader :dependencies, :params, :subject, :bind_object
 
     def initialize(params = {}, dependencies = {})
       @params, @dependencies = params, dependencies
@@ -21,13 +21,13 @@ module LightOperations
     end
 
     def bind_with(binding_obj)
-      @bind_oject = binding_obj
+      @bind_object = binding_obj
       self
     end
 
     def on_success(binded_method = nil, &block)
       if success?
-        bind_oject.send(binded_method, subject) if can_use_binding_method?(binded_method)
+        bind_object.send(binded_method, subject) if can_use_binding_method?(binded_method)
         block.call(subject) if block_given?
       end
       self
@@ -35,7 +35,7 @@ module LightOperations
 
     def on_fail(binded_method = nil, &block)
       unless success?
-        bind_oject.send(binded_method, subject, errors) if can_use_binding_method?(binded_method)
+        bind_object.send(binded_method, subject, errors) if can_use_binding_method?(binded_method)
         block.call(subject, errors) if block_given?
       end
       self
@@ -56,7 +56,7 @@ module LightOperations
     protected
 
     def can_use_binding_method?(method_name)
-      method_name && bind_oject && bind_oject.respond_to?(method_name)
+      method_name && bind_object && bind_object.respond_to?(method_name)
     end
 
     def execute
