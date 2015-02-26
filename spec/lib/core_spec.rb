@@ -18,6 +18,15 @@ describe LightOperations::Core do
   end
 
   context 'use cases' do
+    let(:binding_object) do
+      Class.new(Object).tap do |klass|
+        klass.class_eval do
+          def success_action(_subject); end
+
+          def error_action(_subject, _errors); end
+        end
+      end.new
+    end
 
     # dependency using
 
@@ -93,16 +102,30 @@ describe LightOperations::Core do
         end
       end
 
-      it '#on_success' do
-        subject.run.on_success do |result|
-          expect(result).to eq(:success)
+      context '#on_success' do
+        it 'when bind_with and send_method is used' do
+          expect(binding_object).to receive(:success_action).with(:success)
+          subject.run.bind_with(binding_object).on_success(:success_action)
+        end
+
+        it 'when block is userd' do
+          subject.run.on_success do |result|
+            expect(result).to eq(:success)
+          end
         end
       end
 
-      it '#on_fail' do
-        block_to_exec = -> () {}
-        expect(block_to_exec).not_to receive(:call)
-        subject.run.on_fail(&block_to_exec)
+      context '#on_fail' do
+        it 'when bind_with and send_method is used' do
+          expect(binding_object).not_to receive(:error_action)
+          subject.run.bind_with(binding_object).on_fail(:error_action)
+        end
+
+        it 'when block is userd' do
+          block_to_exec = -> () {}
+          expect(block_to_exec).not_to receive(:call)
+          subject.run.on_fail(&block_to_exec)
+        end
       end
 
       it '#errors' do
@@ -128,17 +151,30 @@ describe LightOperations::Core do
         end
       end
 
-      it '#on_success' do
-        block_to_exec = -> () {}
-        expect(block_to_exec).not_to receive(:call)
-        subject.run.on_success(&block_to_exec)
+      context '#on_success' do
+        it 'when bind_with and send_method is used' do
+          expect(binding_object).not_to receive(:success_action)
+          subject.run.bind_with(binding_object).on_success(:success_action)
+        end
+
+        it 'when block is userd' do
+          block_to_exec = -> () {}
+          expect(block_to_exec).not_to receive(:call)
+          subject.run.on_success(&block_to_exec)
+        end
       end
 
-      it '#on_fail' do
+      context '#on_fail' do
+        it 'when bind_with and send_method is used' do
+          expect(binding_object).to receive(:error_action).with(:fail, [email: :unknown])
+          subject.run.bind_with(binding_object).on_fail(:error_action)
+        end
 
-        subject.run.on_fail do |result, errors|
-          expect(result).to eq(:fail)
-          expect(errors).to eq([email: :unknown])
+        it 'when block is userd' do
+          subject.run.on_fail do |result, errors|
+            expect(result).to eq(:fail)
+            expect(errors).to eq([email: :unknown])
+          end
         end
       end
 

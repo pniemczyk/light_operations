@@ -5,7 +5,7 @@ module LightOperations
     include ::ActiveSupport::Rescuable
     MissingDependency = Class.new(StandardError)
 
-    attr_reader :dependencies, :params, :subject, :binding
+    attr_reader :dependencies, :params, :subject, :bind_oject
 
     def initialize(params = {}, dependencies = {})
       @params, @dependencies = params, dependencies
@@ -17,17 +17,17 @@ module LightOperations
       self
     rescue => exception
       rescue_with_handler(exception) || raise
-    ensure
       self
     end
 
-    def bind_with(binding)
-      @binding = binding
+    def bind_with(binding_obj)
+      @bind_oject = binding_obj
+      self
     end
 
     def on_success(binded_method = nil, &block)
       if success?
-        binding.send(binded_method, subject) if binding && binding.respond_to?(binded_method)
+        bind_oject.send(binded_method, subject) if can_use_binding_method?(binded_method)
         block.call(subject) if block_given?
       end
       self
@@ -35,7 +35,7 @@ module LightOperations
 
     def on_fail(binded_method = nil, &block)
       unless success?
-        binding.send(binded_method, subject, errors) if binding && binding.respond_to?(binded_method)
+        bind_oject.send(binded_method, subject, errors) if can_use_binding_method?(binded_method)
         block.call(subject, errors) if block_given?
       end
       self
@@ -54,6 +54,10 @@ module LightOperations
     end
 
     protected
+
+    def can_use_binding_method?(method_name)
+      method_name && bind_oject && bind_oject.respond_to?(method_name)
+    end
 
     def execute
       fail 'Not implemented yet'
