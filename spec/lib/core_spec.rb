@@ -108,7 +108,7 @@ describe LightOperations::Core do
           subject.run.bind_with(binding_object).on_success(:success_action)
         end
 
-        it 'when block is userd' do
+        it 'when block is used' do
           subject.run.on_success do |result|
             expect(result).to eq(:success)
           end
@@ -121,7 +121,7 @@ describe LightOperations::Core do
           subject.run.bind_with(binding_object).on_fail(:error_action)
         end
 
-        it 'when block is userd' do
+        it 'when block is used' do
           block_to_exec = -> () {}
           expect(block_to_exec).not_to receive(:call)
           subject.run.on_fail(&block_to_exec)
@@ -157,7 +157,7 @@ describe LightOperations::Core do
           subject.run.bind_with(binding_object).on_success(:success_action)
         end
 
-        it 'when block is userd' do
+        it 'when block is used' do
           block_to_exec = -> () {}
           expect(block_to_exec).not_to receive(:call)
           subject.run.on_success(&block_to_exec)
@@ -170,7 +170,7 @@ describe LightOperations::Core do
           subject.run.bind_with(binding_object).on_fail(:error_action)
         end
 
-        it 'when block is userd' do
+        it 'when block is used' do
           subject.run.on_fail do |result, errors|
             expect(result).to eq(:fail)
             expect(errors).to eq([email: :unknown])
