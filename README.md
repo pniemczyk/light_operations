@@ -154,6 +154,10 @@ class AuthController < ApplicationController
 end
 ```
 
+When operation status is most importent we can simply use `#success?` or `#fail?` on the executed operation
+
+Errors are available by `#errors` after operation is executed
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/swift_operations/fork )
