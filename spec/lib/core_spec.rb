@@ -8,13 +8,13 @@ describe LightOperations::Core do
   def subject_factory(&block)
     Class.new(described_class).tap do |klass|
       klass.class_eval(&block)
-    end.new(params, dependencies)
+    end.new(dependencies)
   end
 
-  subject { described_class.new(params, dependencies) }
+  subject { described_class.new(dependencies) }
 
   it 'raise error when #execute is not implemented' do
-    expect { subject.run }.to raise_error('Not implemented yet')
+    expect { subject.on(success: :do_nothing).run }.to raise_error('Not implemented yet')
   end
 
   context 'use cases' do
@@ -33,11 +33,13 @@ describe LightOperations::Core do
     context 'dependency usage' do
       subject do
         subject_factory do
-          def execute
+          def execute(_params)
             dependency(:login_service)
           end
         end
       end
+
+      before { subject.on(success: -> (_subject) {}) }
 
       it 'is allowed when is initialized correctly' do
         expect { subject.run }.not_to raise_error
@@ -46,7 +48,7 @@ describe LightOperations::Core do
       context 'raise_error' do
         let(:dependencies) { {} }
         it 'when dependency missing' do
-          expect { subject.run }.to raise_error(LightOperations::Core::MissingDependency)
+          expect { subject.run }.to raise_error(described_class::MissingDependency)
         end
       end
     end
@@ -54,49 +56,55 @@ describe LightOperations::Core do
     # error handling
 
     context '.rescue_from specific error' do
+      TestError = Class.new(StandardError)
+
+      before { subject.on(success: -> (_subject) {}) }
+
       context 'by block' do
         subject do
           subject_factory do
-            rescue_from StandardError do |_exception|
-              fail 'execute block instead original error'
+            rescue_from TestError do |exception|
+              fail "execute block instead original #{exception.class}"
             end
 
-            def execute
-              fail StandardError, 'What now'
+            def execute(_params)
+              fail TestError, 'What now'
             end
           end
         end
 
         it 'call' do
-          expect { subject.run }.to raise_error('execute block instead original error')
+          expect { subject.run }.to raise_error('execute block instead original TestError')
         end
       end
 
       context 'by defined method' do
         subject do
           subject_factory do
-            rescue_from StandardError, with: :rescue_me
+            rescue_from TestError, with: :rescue_me
 
-            def rescue_me
-              fail 'execute rescue_me method instead original error'
+            def rescue_me(exception)
+              fail "execute rescue_me method instead original #{exception.class}"
             end
 
-            def execute
-              fail StandardError, 'What now'
+            def execute(_params)
+              fail TestError, 'What now'
             end
           end
         end
 
         it 'execute' do
-          expect { subject.run }.to raise_error('execute rescue_me method instead original error')
+          expect { subject.run }.to raise_error('execute rescue_me method instead original TestError')
         end
       end
     end
 
+    # on actions success/fail
+
     context 'when operation is successful' do
       subject do
         subject_factory do
-          def execute
+          def execute(_params)
             :success
           end
         end
@@ -105,46 +113,44 @@ describe LightOperations::Core do
       context '#on_success' do
         it 'when bind_with and send_method is used' do
           expect(binding_object).to receive(:success_action).with(:success)
-          subject.run.bind_with(binding_object).on_success(:success_action)
+          subject.on_success(:success_action).bind_with(binding_object).run
         end
 
         it 'when block is used' do
-          subject.run.on_success do |result|
-            expect(result).to eq(:success)
-          end
+          subject.on_success { |result| expect(result).to eq(:success) }.run
         end
       end
 
       context '#on_fail' do
         it 'when bind_with and send_method is used' do
           expect(binding_object).not_to receive(:error_action)
-          subject.run.bind_with(binding_object).on_fail(:error_action)
+          subject.bind_with(binding_object).on_fail(:error_action).run
         end
 
         it 'when block is used' do
           block_to_exec = -> () {}
           expect(block_to_exec).not_to receive(:call)
-          subject.run.on_fail(&block_to_exec)
+          subject.on_fail(&block_to_exec).run
         end
       end
 
       it '#errors' do
-        expect(subject.run.errors).to eq([])
+        expect(subject.on_success(:success_action).run.errors).to eq([])
       end
 
       it '#fail?' do
-        expect(subject.run.fail?).to eq(false)
+        expect(subject.on_success(:success_action).run.fail?).to eq(false)
       end
 
       it '#success?' do
-        expect(subject.run.success?).to eq(true)
+        expect(subject.on_success(:success_action).run.success?).to eq(true)
       end
     end
 
     context 'when operation is fail' do
       subject do
         subject_factory do
-          def execute
+          def execute(_params)
             fail!([email: :unknown])
             :fail
           end
@@ -154,41 +160,78 @@ describe LightOperations::Core do
       context '#on_success' do
         it 'when bind_with and send_method is used' do
           expect(binding_object).not_to receive(:success_action)
-          subject.run.bind_with(binding_object).on_success(:success_action)
+          subject.bind_with(binding_object).on_success(:success_action).run
         end
 
         it 'when block is used' do
           block_to_exec = -> () {}
           expect(block_to_exec).not_to receive(:call)
-          subject.run.on_success(&block_to_exec)
+          subject.on_success(&block_to_exec).run
         end
       end
 
       context '#on_fail' do
         it 'when bind_with and send_method is used' do
           expect(binding_object).to receive(:error_action).with(:fail, [email: :unknown])
-          subject.run.bind_with(binding_object).on_fail(:error_action)
+          subject.bind_with(binding_object).on_fail(:error_action).run
         end
 
         it 'when block is used' do
-          subject.run.on_fail do |result, errors|
+          subject.on_fail do |result, errors|
             expect(result).to eq(:fail)
             expect(errors).to eq([email: :unknown])
           end
+          subject.run
         end
       end
 
       it '#errors' do
-        expect(subject.run.errors).to eq([email: :unknown])
+        expect(subject.on_fail(:error_action).run.errors).to eq([email: :unknown])
       end
 
       it '#fail?' do
-        expect(subject.run.fail?).to eq(true)
+        expect(subject.on_fail(:error_action).run.fail?).to eq(true)
       end
 
       it '#success?' do
-        expect(subject.run.success?).to eq(false)
+        expect(subject.on_fail(:error_action).run.success?).to eq(false)
       end
+    end
+  end
+
+  context 'prepare operation to reuse or simply clear' do
+    it '#unbind!' do
+      subject.bind_with(:some_object)
+      expect { subject.unbind! }.to change { subject.bind_object }
+        .from(:some_object)
+        .to(nil)
+    end
+
+    it '#clear_actions!' do
+      subject.on(success: :abc, fail: :def)
+      expect { subject.clear_actions! }.to change { subject.send(:actions) }
+        .from(success: :abc, fail: :def)
+        .to({})
+    end
+
+    it '#clear_subject_with_errors!' do
+      %w{ subject fail_errors errors }.each do |variable|
+        subject.instance_variable_set("@#{variable}", variable)
+      end
+      expect(subject.subject).to eq('subject')
+      expect(subject.instance_variable_get('@errors')).to eq('errors')
+      expect(subject.instance_variable_get('@fail_errors')).to eq('fail_errors')
+      subject.clear_subject_with_errors!
+      expect(subject.subject).to be_nil
+      expect(subject.instance_variable_get('@errors')).to be_nil
+      expect(subject.instance_variable_get('@fail_errors')).to be_nil
+    end
+
+    it '#clear!' do
+      expect(subject).to receive(:unbind!)
+      expect(subject).to receive(:clear_actions!)
+      expect(subject).to receive(:clear_subject_with_errors!)
+      subject.clear!
     end
   end
 end

@@ -5,44 +5,68 @@ module LightOperations
     include ::ActiveSupport::Rescuable
     MissingDependency = Class.new(StandardError)
 
-    attr_reader :dependencies, :params, :subject, :bind_object
+    attr_reader :dependencies, :bind_object, :subject
 
-    def initialize(params = {}, dependencies = {})
-      @params, @dependencies = params, dependencies
+    def initialize(dependencies = {})
+      @dependencies = dependencies
     end
 
-    # do not override this method
-    def run
-      @subject = execute
+    # do no.t override this method
+    def run(params = {})
+      @subject = execute(params)
+      execute_actions
       self
     rescue => exception
       rescue_with_handler(exception) || raise
       self
     end
 
-    def bind_with(binding_obj)
-      @bind_object = binding_obj
-      self
-    end
-
     def on_success(binded_method = nil, &block)
-      if success?
-        bind_object.send(binded_method, subject) if can_use_binding_method?(binded_method)
-        block.call(subject) if block_given?
-      end
+      actions[:success] = binded_method || block
       self
     end
 
     def on_fail(binded_method = nil, &block)
-      unless success?
-        bind_object.send(binded_method, subject, errors) if can_use_binding_method?(binded_method)
-        block.call(subject, errors) if block_given?
+      actions[:fail] = binded_method || block
+      self
+    end
+
+    def on(actions_with_responses = {})
+      actions_with_responses.slice(:success, :fail).each do |action, response|
+        actions[action] = response
       end
       self
     end
 
+    def clear!
+      clear_actions!
+      unbind!
+      clear_subject_with_errors!
+      self
+    end
+
+    def unbind!
+      @bind_object = nil
+      self
+    end
+
+    def clear_subject_with_errors!
+      @subject, @fail_errors, @errors = nil, nil, nil
+      self
+    end
+
+    def clear_actions!
+      @actions = {}
+      self
+    end
+
+    def bind_with(bind_object)
+      @bind_object = bind_object
+      self
+    end
+
     def errors
-      @errors ||= (subject.respond_to?(:errors) ? subject.errors : [])
+      @errors ||= fail_errors || (subject.respond_to?(:errors) ? subject.errors : [])
     end
 
     def fail?
@@ -55,16 +79,36 @@ module LightOperations
 
     protected
 
-    def can_use_binding_method?(method_name)
-      method_name && bind_object && bind_object.respond_to?(method_name)
+    attr_reader :fail_errors
+
+    def execute_actions
+      success? ? execute_success_action : execute_fail_action
     end
 
-    def execute
-      fail 'Not implemented yet'
+    def execute_success_action
+      return unless actions.key?(:success)
+      action = actions[:success]
+      bind_object.send(action, subject) if action.is_a?(Symbol) && bind_object
+      action.call(subject) if action.is_a?(Proc)
+    end
+
+    def execute_fail_action
+      return unless actions.key?(:fail)
+      action = actions[:fail]
+      bind_object.send(action, subject, errors) if action.is_a?(Symbol) && bind_object
+      action.call(subject, errors) if action.is_a?(Proc)
     end
 
     def fail!(errors = [])
-      @errors = errors
+      @fail_errors = errors
+    end
+
+    def actions
+      @actions ||= {}
+    end
+
+    def execute(_params = {})
+      fail 'Not implemented yet'
     end
 
     def dependency(name)
