@@ -33,9 +33,7 @@ module LightOperations
     end
 
     def on(actions_with_responses = {})
-      actions_with_responses.slice(:success, :fail).each do |action, response|
-        actions[action] = response
-      end
+      actions_assign(actions_with_responses, :success, :fail)
       self
     end
 
@@ -81,6 +79,10 @@ module LightOperations
     protected
 
     attr_reader :fail_errors
+
+    def actions_assign(hash, *keys)
+      keys.each { |key| actions[key] = hash[key] if hash.key?(key) }
+    end
 
     def execute_actions
       success? ? execute_success_action : execute_fail_action
