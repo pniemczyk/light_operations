@@ -28,7 +28,6 @@ describe LightOperations::Core do
   end
 
   context 'use cases' do
-
     # dependency using
 
     context 'dependency usage' do
@@ -247,7 +246,6 @@ describe LightOperations::Core do
     end
 
     it 'always start with clean state of subject and errors' do
-
       subject
         .bind_with(binding_object)
         .on(success: :success_action, fail: :error_action)
