@@ -13,6 +13,7 @@ module LightOperations
 
     # do no.t override this method
     def run(params = {})
+      clear_subject_with_errors!
       @subject = execute(params)
       execute_actions
       self

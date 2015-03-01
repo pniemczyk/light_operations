@@ -5,6 +5,16 @@ describe LightOperations::Core do
   let(:params)        { { login: 'pawel', password: 'abc' } }
   let(:dependencies)  { { login_service: login_service } }
 
+  let(:binding_object) do
+    Class.new(Object).tap do |klass|
+      klass.class_eval do
+        def success_action(_subject); end
+
+        def error_action(_subject, _errors); end
+      end
+    end.new
+  end
+
   def subject_factory(&block)
     Class.new(described_class).tap do |klass|
       klass.class_eval(&block)
@@ -18,15 +28,6 @@ describe LightOperations::Core do
   end
 
   context 'use cases' do
-    let(:binding_object) do
-      Class.new(Object).tap do |klass|
-        klass.class_eval do
-          def success_action(_subject); end
-
-          def error_action(_subject, _errors); end
-        end
-      end.new
-    end
 
     # dependency using
 
@@ -232,6 +233,29 @@ describe LightOperations::Core do
       expect(subject).to receive(:clear_actions!)
       expect(subject).to receive(:clear_subject_with_errors!)
       subject.clear!
+    end
+  end
+
+  context 'Operation executed several times' do
+    subject do
+      subject_factory do
+        def execute(params = {})
+          fail!(:missing_result) unless params.key?(:result)
+          params[:result]
+        end
+      end
+    end
+
+    it 'always start with clean state of subject and errors' do
+
+      subject
+        .bind_with(binding_object)
+        .on(success: :success_action, fail: :error_action)
+
+      expect(binding_object).to receive(:error_action).with(nil, :missing_result)
+      subject.run
+      expect(binding_object).to receive(:success_action).with(:success)
+      subject.run(result: :success)
     end
   end
 end
