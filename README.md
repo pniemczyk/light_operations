@@ -19,6 +19,109 @@ Or install it yourself as:
 
     $ gem install light_operations
 
+## How it works
+
+Basicly this is a Container for buissnes logic.
+
+You can define dependencies during initialization and run with custom parameters.
+When you define deferred actions on `success` and `fail` before operation execution is finished,
+after execution one of those action depend for execution result will be executed.
+Actions could be a block (Proc) or you could delgate execution to method other object,
+by binding operation with specific object with those methods.
+You also could use operation as simple execution and check status by `success?` or `fail?` method
+and then by using `subject` and `errors` method build your own logic to finish your result.
+There is many possible usecases where and how you could use operations.
+You can build csacade of opreations, use them one after the other,
+use them recursively and a lot more.
+
+Class
+
+```ruby
+class MyOperation < LightOperations::Core
+  def execute(_params = nil)
+    dependency(:my_service) # when missing MissingDependency error will be raised
+  end
+end
+
+```
+
+Initialization
+
+```ruby
+MyOperation.new(my_service: MyService.new)
+```
+
+You can add deferred actions for success and fail
+
+```ruby
+# 1
+MyOperation.new.on_success { |model| render :done, locals: { model: model } }
+# 2
+MyOperation.new.on(success: -> () { |model| render :done, locals: { model: model } )
+```
+
+When you bind operation with other object you could delegate actions to binded object methods
+
+```ruby
+# 1
+MyOperation.new.bind_with(self).on_success(:done)
+# 2
+MyOperation.new.bind_with(self).on(success: :done)
+```
+
+Execution method `#run` finalize actions execution
+
+```ruby
+MyOperation.new.bind_with(self).on(success: :done).run(params)
+```
+
+After execution operation hold execution state you could get back all info you need
+
+- `#success?` => `true/false`
+- `#fail?`    => `true/false`
+- `#subject?` => `success or fail object`
+- `#errors`   => `errors by default array but you can return any objec tou want`
+
+Default usage
+
+```ruby
+operation.new(dependencies)
+  .on(success: :done, fail: :show_error)
+  .bind_with(self)
+  .run(params)
+```
+
+or
+
+```ruby
+operation.new(dependencies).tap do |op|
+  return op.run(params).success? ? op.subject : op.errors
+end
+```
+
+#### success block or method receive subject as argument
+`(subject) -> { }`
+
+or
+
+```ruby
+def success_method(subject)
+  ...
+end
+
+```
+#### fail block or method receive subject and errors as argument
+`(subject, errors) -> { }`
+
+or
+
+```ruby
+def fail_method(subject, errors)
+  ...
+end
+
+```
+
 ## Usage
 
 
@@ -37,10 +140,11 @@ class ArticleVoteBumperOperation < LightOperations::Core
       article.vote = article.vote.next
       article.save
     end
+    { success: true }
   end
 
   def on_ar_error(_exception)
-    fail!({ vote: 'could not be updated!' })
+    fail!(vote: 'could not be updated!')
   end
 end
 ```
@@ -50,14 +154,14 @@ Controller
 ```ruby
 class ArticleVotesController < ApplicationController
   def up
-    response = article_vote_bumper_op.run.success? ? { success: true } : article_vote_bumper_op.errors
+    response = operation.run.success? ? response.subject : response.errors
     render :up, json: response
   end
 
   private
 
-  def article_vote_bumper_op
-    @article_vote_bumper_op ||= ArticleVoteBumperOperation.new(article_model: article)
+  def operation
+    @operation ||= ArticleVoteBumperOperation.new(article_model: article)
   end
 
   def article
@@ -66,7 +170,7 @@ class ArticleVotesController < ApplicationController
 end
 ```
 
-#### Basic recursion execution for collect newsfeeds from 2 sources
+#### Basic recursive execution to collect newsfeeds from 2 sources
 
 Operation
 
@@ -92,7 +196,8 @@ class NewsFeedsController < ApplicationController
   BACKUP_NEWS_URL = 'http://rss.not_so_bad_news.pl'
   def news
     collect_feeds_op
-      on(success: :display_news, fail: :second_attempt)
+      .bind_with(self)
+      .on(success: :display_news, fail: :second_attempt)
       .run(url: DEFAULT_NEWS_URL)
   end
 
@@ -105,7 +210,7 @@ class NewsFeedsController < ApplicationController
   end
 
   def display_news(news)
-    render :display_news, locals { news: news }
+    render :display_news, locals: { news: news }
   end
 
   def display_old_news
@@ -121,7 +226,58 @@ class NewsFeedsController < ApplicationController
 end
 ```
 
+#### Basic with active_model/active_record object
 
+Operation
+
+```ruby
+class AddBookOperation < LightOperations::Core
+  def execute(params = {})
+    dependency(:book_model).new(params).tap do |model|
+      model.valid? # this method automatically provide errors from model.errors
+    end
+  end
+end
+```
+
+Controller
+
+```ruby
+class BooksController < ApplicationController
+  def index
+    render :index, locals: { collection: Book.all }
+  end
+
+  def new
+    render_book_form
+  end
+
+  def create
+    add_book_op
+      .bind_with(self)
+      .on(success: :book_created, fail: :render_book_form)
+      .run(permit_book_params)
+  end
+
+  private
+
+  def book_created(book)
+    redirect_to :index, notice: "book #{book.name} created"
+  end
+
+  def render_book_form(book = Book.new, _errors = nil)
+    render :new, locals: { book: book }
+  end
+
+  def add_book_op
+    @add_book_op ||= AddBookOperation.new(book_model: Book)
+  end
+
+  def permit_book_params
+    params.requre(:book)
+  end
+end
+```
 
 #### Simple case when you want have user authorization
 
@@ -253,13 +409,27 @@ class AuthController < ApplicationController
 end
 ```
 
+Register success and fails action is avialable by `#on` like :
+
+```ruby
+  def create
+    auth_op.bind_with(self).on(success: :dashboard, fail: :show_error).run(params)
+  end
+```
+
+Operation have some helper methods (to improve recursive execution)
+
+- `#clear!`                     => return operation to init state
+- `#unbind!`                    => unbind binded object
+- `#clear_subject_with_errors!` => clear subject and errors
+
 When operation status is most importent we can simply use `#success?` or `#fail?` on the executed operation
 
 Errors are available by `#errors` after operation is executed
 
 ## Contributing
 
-1. Fork it ( https://github.com/[my-github-username]/swift_operations/fork )
+1. Fork it ( https://github.com/[my-github-username]/light_operations/fork )
 2. Create your feature branch (`git checkout -b my-new-feature`)
 3. Commit your changes (`git commit -am 'Add some feature'`)
 4. Push to the branch (`git push origin my-new-feature`)
