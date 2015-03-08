@@ -34,18 +34,22 @@ module LightOperations
     end
 
     def form(*args)
-      @form ||= model(*args)
+      model(*args)
     end
 
     def model(*args)
-      @model ||= args.nil? ? self.class.model.new : self.class.model.new(*args)
+      @subject ||= args.nil? ? self.class.model.new : self.class.model.new(*args)
     end
 
     def validate(params)
-      model_instance = instantiate_model(model_with_validation_class, params)
+      model_instance = setup_model(params)
       execute_validation(model_instance) if self.class.validation
       yield(model_instance) if block_given?
       @subject = model_instance
+    end
+
+    def setup_model(params)
+      instantiate_model(model_with_validation_class, params)
     end
 
     private

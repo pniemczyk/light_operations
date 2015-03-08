@@ -41,9 +41,14 @@ describe LightOperations::ModelableCore do
   end
 
   context '#form' do
+    let(:params) { { age: 10 } }
+
     subject do
       core_object_factory(described_class, dependencies: dependencies) do
         model ModelClass
+        def execute(params)
+          setup_model(params)
+        end
       end
     end
 
@@ -53,22 +58,30 @@ describe LightOperations::ModelableCore do
       end
 
       it 'return instance of model with assign attributes' do
-        opts   = { age: 10 }
-        result = subject.form(opts)
+        result = subject.form(params)
         expect(result).to be_an_instance_of(ModelClass)
         expect(result.age).to eq(10)
       end
     end
 
-    context 'when operation was executed' do
-      it 'form is created by operation execution'
+    context 'when operation was executed with setup_model' do
+      it 'form is created by operation execution' do
+        subject.run(params)
+        result = subject.form
+        expect(result.age).to eq(10)
+      end
     end
   end
 
   context '#model' do
+    let(:params) { { age: 20 } }
+
     subject do
       core_object_factory(described_class, dependencies: dependencies) do
         model ModelClass
+        def execute(params)
+          setup_model(params)
+        end
       end
     end
 
@@ -78,15 +91,18 @@ describe LightOperations::ModelableCore do
       end
 
       it 'return instance of model with assign attributes' do
-        opts   = { age: 20 }
-        result = subject.model(opts)
+        result = subject.model(params)
         expect(result).to be_an_instance_of(ModelClass)
         expect(result.age).to eq(20)
       end
     end
 
-    context 'when operation was executed' do
-      it 'form is created by operation execution'
+    context 'when operation was executed with setup_model' do
+      it 'model is created by operation execution' do
+        subject.run(params)
+        result = subject.model
+        expect(result.age).to eq(20)
+      end
     end
   end
 
