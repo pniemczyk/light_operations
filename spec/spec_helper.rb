@@ -6,6 +6,9 @@ require 'coveralls'
 Coveralls.wear!
 
 require 'light_operations'
+# root_path = File.expand_path('../../', __FILE__)
+# Dir[root_path + '/spec/support/**/*.rb'].each { |f| require f }
+Dir['./spec/support/**/*.rb'].sort.each { |f| require f }
 
 RSpec.configure do |config|
   config.filter_run :focus

@@ -5,20 +5,10 @@ describe LightOperations::Core do
   let(:params)        { { login: 'pawel', password: 'abc' } }
   let(:dependencies)  { { login_service: login_service } }
 
-  let(:binding_object) do
-    Class.new(Object).tap do |klass|
-      klass.class_eval do
-        def success_action(_subject); end
-
-        def error_action(_subject, _errors); end
-      end
-    end.new
-  end
+  let(:binding_object) { binding_object_factory }
 
   def subject_factory(&block)
-    Class.new(described_class).tap do |klass|
-      klass.class_eval(&block)
-    end.new(dependencies)
+    core_object_factory(described_class, dependencies: dependencies, &block)
   end
 
   subject { described_class.new(dependencies) }

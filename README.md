@@ -129,8 +129,7 @@ end
 
 ## Usage
 
-
-### Uses cases
+### Usage cases
 
 #### Basic vote logic
 
