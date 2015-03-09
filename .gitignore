@@ -21,3 +21,4 @@ tmp
 *.a
 mkmf.log
 .rubocop_todo.yml
+.ruby-version
