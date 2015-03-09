@@ -91,7 +91,7 @@ module LightOperations
     end
 
     def model_with_validation_class
-      @model_with_validation_class ||= model_class.clone.tap do |m_class|
+      @model_with_validation_class ||= Class.new(model_class).tap do |m_class|
         operation_name = self.class.name
         m_class.class_eval("def self.name; \"#{model_class}::#{operation_name}\"; end")
         m_class.class_eval(&self.class.validation) if self.class.validation

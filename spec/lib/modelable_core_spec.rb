@@ -1,6 +1,5 @@
 require 'spec_helper'
 require 'active_model'
-require 'byebug'
 
 describe LightOperations::ModelableCore do
   class ModelClass
