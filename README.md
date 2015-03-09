@@ -431,6 +431,125 @@ When operation status is most importent we can simply use `#success?` or `#fail?
 
 Errors are available by `#errors` after operation is executed
 
+#### In v0.0.7 was added new core `LightOperations::ModelableCore`
+
+#### LightOperations::ModelableCore
+It is based on `LightOperations::Core`.
+This core allow to use model as subject of operation. This core nicely separate validation logic from domain model and could be helpful with view forms (smoothly adapts to `ActiveRecord::Base` and `ActiveModel::Model` models it's not a requirement)
+
+## Usage
+
+There are 2 different operation modes `[:create, :update]` those modes determines that you want to create new entity or update old one. In the following examples I try to explain those differences
+
+Class with create operation
+```ruby
+class AddBookOperation < LightOperations::ModelableCore
+  rescue_from ActiveRecord::Errors, with: :db_error
+  action_kind :create # by default
+  model Book
+  validation do
+    validates :name, presence: true
+  end
+
+  def execute(params = {})
+  validate(params) do |instance|
+    #additional validation
+    if instance.name.include?('test')
+      instance.save!
+    else
+      model.errors.add(:name, 'only test books allowed')
+    end
+  end
+  end
+
+  def db_error(e)
+    model.errors.add(:name, 'could not be saved')
+  end
+end
+```
+
+Class with update operation
+```ruby
+class EditBookOperation < LightOperations::ModelableCore
+  rescue_from ActiveRecord::Errors, with: :db_error
+  action_kind :update
+  model Book
+  validation do
+    validates :name, presence: true
+    validates :editor, presence: true
+  end
+
+  def execute(params = {})
+  validate(params) do |instance|
+    instance.save!
+  end
+  end
+
+  def db_error(e)
+    model.errors.add(:name, 'could not be saved')
+  end
+end
+```
+
+Controller
+```ruby
+class BooksController < ApplicationController
+  def index
+    render :index, locals: { collection: Book.all }
+  end
+
+  def new
+    render_book_form
+  end
+
+  def create
+    add_book_op
+      .bind_with(self)
+      .on(success: :book_created, fail: :render_book_form)
+      .run(permit_book_params)
+  end
+
+  def edit
+    render_book_edit_form
+  end
+
+  def save
+    edit_book_op
+      .bind_with(self)
+      .on(success: :book_created_or_saved, fail: :render_book_edit_form)
+      .run(permit_book_params)
+  end
+
+  private
+
+  def book_created_or_saved(book)
+    redirect_to :index, notice: "book #{book.name} created or updated"
+  end
+
+  def render_book_edit_form(book = edit_book_op.form, _errors = nil)
+    render :edit, locals: { book: book }
+  end
+
+  def render_book_form(book = add_book_op.form, _errors = nil)
+    render :new, locals: { book: book }
+  end
+
+  def add_book_op
+    @add_book_op ||= AddBookOperation.new
+  end
+
+  def edit_book_op
+    @edit_book_op ||= EditBookOperation.new
+  end
+
+  def permit_book_params
+    params.requre(:book)
+  end
+end
+```
+
+
+
 ## Contributing
 
 1. Fork it ( https://github.com/[my-github-username]/light_operations/fork )
