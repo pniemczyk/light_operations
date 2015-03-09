@@ -1,5 +1,9 @@
 # LightOperations
 
+[![Gem Version](https://badge.fury.io/rb/light_operations.svg)](http://badge.fury.io/rb/light_operations)
+[![Build Status](https://travis-ci.org/pniemczyk/light_operations.svg)](https://travis-ci.org/pniemczyk/light_operations)
+[![Dependency Status](https://gemnasium.com/pniemczyk/light_operations.svg)](https://gemnasium.com/pniemczyk/light_operations)
+
 When you want have slim controllers or some logic with several operations
 this gem could help you to have nice separated and clan code. CAN HELP YOU! :D
 
