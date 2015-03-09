@@ -28,5 +28,4 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'coveralls', '~> 0.7'
   spec.add_development_dependency 'awesome_print', '~> 1.6'
   spec.add_development_dependency 'activemodel', '~> 4.2'
-  spec.add_development_dependency 'byebug', '~> 3.5'
 end
