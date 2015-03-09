@@ -33,12 +33,12 @@ module LightOperations
       end
     end
 
-    def form(*args)
-      model(*args)
+    def form(params = {})
+      model(params)
     end
 
-    def model(*args)
-      @subject ||= args.nil? ? self.class.model.new : self.class.model.new(*args)
+    def model(params = {})
+      @subject ||= instantiate_model(self.class.model, params)
     end
 
     def validate(params)
