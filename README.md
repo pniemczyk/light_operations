@@ -548,7 +548,19 @@ class BooksController < ApplicationController
 end
 ```
 
+## if you want to skip validation you could try this code:
 
+```ruby
+
+class AddBookOperation < LightOperations::ModelableCore
+  model Book
+  def execute(params = {})
+    setup_model(params) do |m|
+      m.name.include?('test') ? m.save : model.errors.add(:name, 'only test books allowed')
+    end
+  end
+end
+```
 
 ## Contributing
 
