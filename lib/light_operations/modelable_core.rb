@@ -41,15 +41,32 @@ module LightOperations
       @subject ||= instantiate_model(self.class.model, params)
     end
 
-    def validate(params)
-      model_instance = setup_model(params)
-      execute_validation(model_instance) if self.class.validation
-      yield(model_instance) if block_given?
-      @subject = model_instance
+    # do no.t override this method
+    def run(params = {})
+      clear_subject_with_errors!
+      @subject = setup_model(params)
+      execute_validation(subject)
+      execute(params)
+      execute_actions
+      self
+    rescue => exception
+      rescue_with_handler(exception) || raise
+      self
+    end
+
+    def validate
+      yield(subject) if block_given? && success?
+    end
+
+    def validate!
+      yield(subject) if block_given?
     end
 
     def setup_model(params)
       instantiate_model(model_with_validation_class, params)
+    end
+
+    def execute(_params = {})
     end
 
     private
@@ -78,6 +95,7 @@ module LightOperations
       model_class.find(params[:id])
     end
 
+    # Should be overrided when the model is not a active_record model
     def execute_validation(model_instance)
       model_instance.valid?
     end

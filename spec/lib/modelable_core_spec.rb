@@ -45,9 +45,6 @@ describe LightOperations::ModelableCore do
     subject do
       core_object_factory(described_class, dependencies: dependencies) do
         model ModelClass
-        def execute(params)
-          setup_model(params)
-        end
       end
     end
 
@@ -78,9 +75,6 @@ describe LightOperations::ModelableCore do
     subject do
       core_object_factory(described_class, dependencies: dependencies) do
         model ModelClass
-        def execute(params)
-          setup_model(params)
-        end
       end
     end
 
@@ -106,7 +100,7 @@ describe LightOperations::ModelableCore do
   end
 
   context '#validate' do
-    context 'when validation and validate block are used' do
+    context 'when validation and validate block are present' do
       def subject_with_both_validate_and_validation_block(name = nil)
         core_object_factory(described_class, name: name, dependencies: dependencies) do
           action_kind :create
@@ -116,14 +110,14 @@ describe LightOperations::ModelableCore do
             validates :name, presence: true
           end
           def execute(params = {})
-            validate(params) { |model| model.errors.add(:age, 'you are too young to play with me') if model.age < 10 }
+            validate { |model| model.errors.add(:age, 'you are too young to play with me') if model.age < 10 }
           end
         end
       end
 
-      context 'success' do
+      context 'on success' do
         subject { subject_with_both_validate_and_validation_block('TestOperationWithValidationAndValidateWhenSuccess') }
-        it 'success with object' do
+        it 'setup success subject' do
           subject.run(age: 10, name: 'Pawel Niemczyk')
           model = subject.subject
           expect(model.class.name).to eq('ModelClass::TestOperationWithValidationAndValidateWhenSuccess')
@@ -133,18 +127,18 @@ describe LightOperations::ModelableCore do
         end
       end
 
-      context 'fail' do
+      context 'on fail should not execute validate block' do
         subject { subject_with_both_validate_and_validation_block('TestOperationWithValidationAndValidateWhenFail') }
-        it 'with errors' do
+        it 'setup fail subject with errors' do
           subject.run(age: 4)
           expect(subject.subject.class.name).to eq('ModelClass::TestOperationWithValidationAndValidateWhenFail')
           expect(subject.fail?).to eq(true)
-          expect(subject.errors.as_json).to eq(name: ["can't be blank"], age: ['you are too young to play with me'])
+          expect(subject.errors.as_json).to eq(name: ["can't be blank"])
         end
       end
     end
 
-    context 'when validation block is used' do
+    context 'when validation block is present' do
       def subject_with_validation_block(name = nil)
         core_object_factory(described_class, name: name, dependencies: dependencies) do
           action_kind :create
@@ -153,16 +147,13 @@ describe LightOperations::ModelableCore do
             include ActiveModel::Validations
             validates :name, presence: true
           end
-          def execute(params = {})
-            validate(params)
-          end
         end
       end
 
-      context 'fail' do
+      context 'on fail' do
         subject { subject_with_validation_block('TestOperationWithValidationWhenFail') }
 
-        it 'with errors' do
+        it 'setup fail subject with errors' do
           subject.run
           model = subject.subject
           expect(model.class.name).to eq('ModelClass::TestOperationWithValidationWhenFail')
@@ -173,10 +164,10 @@ describe LightOperations::ModelableCore do
         end
       end
 
-      context 'success' do
+      context 'on uccess' do
         subject { subject_with_validation_block('TestOperationWithValidationWhenSuccess') }
 
-        it 'with object' do
+        it 'setup success subject' do
           subject.run(name: 'Pawel Niemczyk')
           model = subject.subject
           expect(model.class.name).to eq('ModelClass::TestOperationWithValidationWhenSuccess')
@@ -187,22 +178,22 @@ describe LightOperations::ModelableCore do
       end
     end
 
-    context 'when validate block is used' do
+    context 'when validate block is present' do
       def subject_with_validate_block(name = nil)
         core_object_factory(described_class, name: name, dependencies: dependencies) do
           action_kind :create
           model ModelClass
           def execute(params = {})
-            validate(params) do |model|
-              fail!(age: ['you are too young to play with me']) if model.age < 10
+            validate do |m|
+              fail!(age: ['you are too young to play with me']) if m.age < 10
             end
           end
         end
       end
 
-      context 'fail' do
+      context 'on fail' do
         subject { subject_with_validate_block('TestOperationWithValidateWhenFail') }
-        it 'with errors' do
+        it 'setup fail subject with errors' do
           subject.run(age: 4)
           model = subject.subject
           expect(model.class.name).to eq('ModelClass::TestOperationWithValidateWhenFail')
@@ -213,9 +204,9 @@ describe LightOperations::ModelableCore do
         end
       end
 
-      context 'success' do
+      context 'on success' do
         subject { subject_with_validate_block('TestOperationWithValidateWhenSuccess') }
-        it 'with object' do
+        it 'setup success subject' do
           subject.run(age: 10)
           model = subject.subject
           expect(model.class.name).to eq('ModelClass::TestOperationWithValidateWhenSuccess')

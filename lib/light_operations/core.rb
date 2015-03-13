@@ -103,6 +103,7 @@ module LightOperations
     end
 
     def fail!(errors = [])
+      @errors      = nil
       @fail_errors = errors
     end
 
