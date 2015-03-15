@@ -102,7 +102,8 @@ module LightOperations
       action.call(subject, errors) if action.is_a?(Proc)
     end
 
-    def fail!(errors = [])
+    def fail!(errors = true)
+      @errors      = nil
       @fail_errors = errors
     end
 
