@@ -102,9 +102,9 @@ module LightOperations
       action.call(subject, errors) if action.is_a?(Proc)
     end
 
-    def fail!(errors = true)
+    def fail!(fail_obj = [])
       @errors      = nil
-      @fail_errors = errors
+      @fail_errors = fail_obj
     end
 
     def actions
