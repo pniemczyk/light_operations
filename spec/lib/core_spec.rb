@@ -235,6 +235,27 @@ describe LightOperations::Core do
     end
   end
 
+  context '#fail! in execute when is without arguments', focus: true do
+    subject do
+      subject_factory do
+        def execute(params = {})
+          fail! unless params.key?(:result)
+          params[:result]
+        end
+      end
+    end
+
+    it 'setup operation in fail state' do
+      expect(subject.run.success?).to eq(false)
+      expect(subject.run.fail?).to eq(true)
+    end
+
+    it 'setup operation in fail state' do
+      expect(subject.run(result: 'ok').success?).to eq(true)
+      expect(subject.run(result: 'ok').fail?).to eq(false)
+    end
+  end
+
   context 'Operation executed several times' do
     subject do
       subject_factory do
