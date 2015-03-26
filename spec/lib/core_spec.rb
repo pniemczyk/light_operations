@@ -8,9 +8,9 @@ describe LightOperations::Core do
   let(:binding_object) do
     Class.new(Object).tap do |klass|
       klass.class_eval do
-        def success_action(_subject); end
+        def success_action(_operation); end
 
-        def error_action(_subject, _errors); end
+        def error_action(_operaation); end
       end
     end.new
   end
@@ -25,6 +25,17 @@ describe LightOperations::Core do
 
   it 'raise error when #execute is not implemented' do
     expect { subject.on(success: :do_nothing).run }.to raise_error('Not implemented yet')
+  end
+
+  it '.subject_name' do
+    test_obj = subject_factory do
+      subject_name :order
+      def execute(params)
+        params[:done] || fail!(:error)
+      end
+    end
+    test_obj.run(done: :success)
+    expect(test_obj.order).to eq(:success)
   end
 
   context 'use cases' do
@@ -112,12 +123,12 @@ describe LightOperations::Core do
 
       context '#on_success' do
         it 'when bind_with and send_method is used' do
-          expect(binding_object).to receive(:success_action).with(:success)
+          expect(binding_object).to receive(:success_action).with(subject)
           subject.on_success(:success_action).bind_with(binding_object).run
         end
 
         it 'when block is used' do
-          subject.on_success { |result| expect(result).to eq(:success) }.run
+          subject.on_success { |operation| expect(operation.subject).to eq(:success) }.run
         end
       end
 
@@ -172,14 +183,14 @@ describe LightOperations::Core do
 
       context '#on_fail' do
         it 'when bind_with and send_method is used' do
-          expect(binding_object).to receive(:error_action).with(:fail, [email: :unknown])
+          expect(binding_object).to receive(:error_action).with(subject)
           subject.bind_with(binding_object).on_fail(:error_action).run
         end
 
         it 'when block is used' do
-          subject.on_fail do |result, errors|
-            expect(result).to eq(:fail)
-            expect(errors).to eq([email: :unknown])
+          subject.on_fail do |operation|
+            expect(operation.subject).to eq(:fail)
+            expect(operation.errors).to eq([email: :unknown])
           end
           subject.run
         end
@@ -202,7 +213,7 @@ describe LightOperations::Core do
   context 'prepare operation to reuse or simply clear' do
     it '#unbind!' do
       subject.bind_with(:some_object)
-      expect { subject.unbind! }.to change { subject.bind_object }
+      expect { subject.unbind! }.to change { subject.send(:bind_object) }
         .from(:some_object)
         .to(nil)
     end
@@ -235,7 +246,7 @@ describe LightOperations::Core do
     end
   end
 
-  context '#fail! in execute when is without arguments', focus: true do
+  context '#fail! in execute when is without arguments' do
     subject do
       subject_factory do
         def execute(params = {})
@@ -271,9 +282,9 @@ describe LightOperations::Core do
         .bind_with(binding_object)
         .on(success: :success_action, fail: :error_action)
 
-      expect(binding_object).to receive(:error_action).with(nil, :missing_result)
+      expect(binding_object).to receive(:error_action).with(subject)
       subject.run
-      expect(binding_object).to receive(:success_action).with(:success)
+      expect(binding_object).to receive(:success_action).with(subject)
       subject.run(result: :success)
     end
   end

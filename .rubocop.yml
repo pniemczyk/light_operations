@@ -45,4 +45,5 @@ Metrics/LineLength:
 AllCops:
   Exclude:
     - '**/Guardfile'
-    - '**/light_operations.gemspec'
+    - '**/model_operations.gemspec'
+    - '**/spec/support/factory_helper.rb'

@@ -5,7 +5,11 @@ module LightOperations
     include ::ActiveSupport::Rescuable
     MissingDependency = Class.new(StandardError)
 
-    attr_reader :dependencies, :bind_object, :subject
+    attr_reader :subject
+
+    def self.subject_name(method_name)
+      send(:define_method, method_name, -> () { self.subject })
+    end
 
     def initialize(dependencies = {})
       @dependencies = dependencies
@@ -78,28 +82,21 @@ module LightOperations
 
     protected
 
-    attr_reader :fail_errors
+    attr_reader :dependencies, :bind_object, :fail_errors
 
     def actions_assign(hash, *keys)
       keys.each { |key| actions[key] = hash[key] if hash.key?(key) }
     end
 
     def execute_actions
-      success? ? execute_success_action : execute_fail_action
+      success? ? execute_action_kind(:success) : execute_action_kind(:fail)
     end
 
-    def execute_success_action
-      return unless actions.key?(:success)
-      action = actions[:success]
-      bind_object.send(action, subject) if action.is_a?(Symbol) && bind_object
-      action.call(subject) if action.is_a?(Proc)
-    end
-
-    def execute_fail_action
-      return unless actions.key?(:fail)
-      action = actions[:fail]
-      bind_object.send(action, subject, errors) if action.is_a?(Symbol) && bind_object
-      action.call(subject, errors) if action.is_a?(Proc)
+    def execute_action_kind(kind)
+      return unless actions.key?(kind)
+      action = actions[kind]
+      bind_object.send(action, self) if action.is_a?(Symbol) && bind_object
+      action.call(self) if action.is_a?(Proc)
     end
 
     def fail!(fail_obj = true)
