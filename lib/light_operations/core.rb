@@ -8,7 +8,7 @@ module LightOperations
     attr_reader :subject
 
     def self.subject_name(method_name)
-      send(:define_method, method_name, -> () { self.subject })
+      send(:define_method, method_name, proc { self.subject })
     end
 
     def initialize(dependencies = {})
