@@ -39,6 +39,71 @@ There is many possible usecases where and how you could use operations.
 You can build csacade of opreations, use them one after the other,
 use them recursively and a lot more.
 
+
+Examples:
+
+#### Simple
+```ruby
+require 'light_operations'
+
+class CorrectNumber < LightOperations::Core
+  def execute(params)
+    params[:number] > 0 || fail!(:wrong_number)
+  end
+end
+
+op = CorrectNumber.new
+
+p op.run(number: 0).success? # return false
+p op.run(number: 0).false?   # return true
+p op.run(number: 1).success? # return true
+p op.run(number: 1).false?   # return false
+```
+
+#### With active_model
+
+```ruby
+require 'light_operations'
+require 'active_model'
+
+class Person
+  include ActiveModel::Model
+
+  attr_accessor :name, :age
+  validates_presence_of :name
+end
+
+class CreatePerson < LightOperations::Core
+  subject_name :person
+  def execute(params = {})
+    dependency(:repository).new(params).tap do |person|
+      person.valid?
+    end
+  end
+end
+
+class FakeController
+  def create(params = {})
+    create_operation.run(params)
+  end
+
+  def create_operation
+    @create_operation ||= CreatePerson.new(repository: Person).bind_with(self).on(success: :render_success, fail: :render_fail)
+  end
+
+  def render_success(operation)
+    person = operation.person
+    puts "name: #{person.name}"
+  end
+
+  def render_fail(operation)
+    person, errors = operation.subject, operation.errors
+    puts errors.as_json
+    puts "name: #{person.name}"
+  end
+end
+
+```
 Class
 
 ```ruby
@@ -60,9 +125,9 @@ You can add deferred actions for success and fail
 
 ```ruby
 # 1
-MyOperation.new.on_success { |model| render :done, locals: { model: model } }
+MyOperation.new.on_success { |operation| render :done, locals: { model: operation.subject } }
 # 2
-MyOperation.new.on(success: -> () { |model| render :done, locals: { model: model } )
+MyOperation.new.on(success: -> () { |operation| render :done, locals: { model: operation.subject } )
 ```
 
 When you bind operation with other object you could delegate actions to binded object methods
@@ -104,24 +169,26 @@ operation.new(dependencies).tap do |op|
 end
 ```
 
-#### success block or method receive subject as argument
-`(subject) -> { }`
+#### success block or method receive operation as argument
+##### operation.subject  hold success object. You can use subject_name to create alias_method for subject
+`(operation) -> { }`
 
 or
 
 ```ruby
-def success_method(subject)
+def success_method(operation)
   ...
 end
 
 ```
-#### fail block or method receive subject and errors as argument
-`(subject, errors) -> { }`
+#### fail block or method receive operation as argument
+##### operation.subject, operation.errors  hold failure object and errors. You can use subject_name to create alias_method for subject
+`(operation) -> { }`
 
 or
 
 ```ruby
-def fail_method(subject, errors)
+def fail_method(operation)
   ...
 end
 
@@ -182,6 +249,7 @@ Operation
 ```ruby
 class CollectFeedsOperation < LightOperations::Core
   rescue_from Timeout::Error, with: :on_timeout
+  subject_name :news
 
   def execute(params = {})
     dependency(:http_client).get(params.fetch(:url)).body
@@ -208,14 +276,14 @@ class NewsFeedsController < ApplicationController
 
   private
 
-  def second_attempt(_news, _errors)
-    collect_feeds_op
+  def second_attempt(operation)
+    operation
       .on_fail(:display_old_news)
       .run(url: BACKUP_NEWS_URL)
   end
 
-  def display_news(news)
-    render :display_news, locals: { news: news }
+  def display_news(operation)
+    render :display_news, locals: { news: operation.news }
   end
 
   def display_old_news
@@ -237,6 +305,7 @@ Operation
 
 ```ruby
 class AddBookOperation < LightOperations::Core
+  subject_name :book
   def execute(params = {})
     dependency(:book_model).new(params).tap do |model|
       model.valid? # this method automatically provide errors from model.errors
@@ -266,11 +335,12 @@ class BooksController < ApplicationController
 
   private
 
-  def book_created(book)
-    redirect_to :index, notice: "book #{book.name} created"
+  def book_created(operation)
+    redirect_to :index, notice: "book #{operation.book.name} created"
   end
 
-  def render_book_form(book = Book.new, _errors = nil)
+  def render_book_form(operation=nil)
+  book = operation ? operation.book : Book.new
     render :new, locals: { book: book }
   end
 
@@ -291,7 +361,7 @@ Operation
 ```ruby
 class AuthOperation < LightOperations::Core
   rescue_from AuthFail, with: :on_auth_error
-
+  subject_name :account
   def execute(params = {})
     dependency(:auth_service).login(login: login(params), password: password(params))
   end
@@ -328,13 +398,13 @@ class AuthController < ApplicationController
 
   private
 
-  def create_session_with_dashbord_redirection(account)
-    session_create_for(account)
+  def create_session_with_dashbord_redirection(operation)
+    session_create_for(operation.account)
     redirect_to :dashboard
   end
 
-  def render_account_with_errors(account, _errors)
-    render :new, locals: { account: account }
+  def render_account_with_errors(operation)
+    render :new, locals: { account: operation.account }
   end
 
   def auth_op
@@ -357,8 +427,8 @@ class AuthController < ApplicationController
 
   def create
     auth_op
-      .on_success{ |account| create_session_with_dashbord_redirection(account) }
-      .on_fail { |account, _errors| render :new, locals: { account: account } }
+      .on_success{ |op| create_session_with_dashbord_redirection(op.account) }
+      .on_fail { |op| render :new, locals: { account: op.account } }
       .run(params)
   end
 
@@ -394,14 +464,14 @@ class AuthController < ApplicationController
   private
 
   def go_to_dashboard
-    -> (account) do
-      session_create_for(account)
+    -> (op) do
+      session_create_for(op.account)
       redirect_to :dashboard
     end
   end
 
   def go_to_login
-    -> (account, _errors) { render :new, locals: { account: account } }
+    -> (op) { render :new, locals: { account: op.account } }
   end
 
   def auth_op
