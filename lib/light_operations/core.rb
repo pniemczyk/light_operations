@@ -23,6 +23,7 @@ module LightOperations
       self
     rescue => exception
       rescue_with_handler(exception) || raise
+      execute_actions
       self
     end
 
