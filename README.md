@@ -24,6 +24,8 @@ Or install it yourself as:
 
     $ gem install light_operations
 
+ **Important latest version of gem > 1.2.x works only with ruby 2.x**
+
 ## How it works
 
 Basicly this is a Container for buissnes logic.
@@ -501,6 +503,110 @@ Operation have some helper methods (to improve recursive execution)
 When operation status is most importent we can simply use `#success?` or `#fail?` on the executed operation
 
 Errors are available by `#errors` after operation is executed
+
+### Whats new in 1.2.x
+New module LightOperations::Flow which gives very simple and easy way to create operation per action in controller (tested on rails).
+
+#### How it works:
+
+include module in controller like this
+```ruby
+class AccountsController < VersionController
+  include LightOperations::Flow
+  operation :accounts, namespace: Operations, actions: [:create, :show]
+  def render_create(op)
+    render text: op.subject
+  end
+
+  def render_fail_create(op)
+    render text: op.errors # or if you want to show form use 'op.subject'
+  end
+end
+```
+
+Now create operation class for account creation (components/operations/accounts/create.rb):
+
+```ruby
+module Operations
+  module Accounts
+    class Create < LightOperations::Core
+      rescue_from ActiveRecord::RecordInvalid, with: :invalid_record_handler
+
+      def execute(params:)
+        Account.create!(params.require(:account))
+      end
+
+      private
+
+      def invalid_record_handler(ex)
+        fail!(ex.record.errors)
+      end
+    end
+  end
+end
+```
+
+add into `application.rb`
+
+```ruby
+config.autoload_paths += %W(
+  #{config.root}/app/components
+)
+```
+
+But it is not all :D (operation params gives you a lot more)
+
+```ruby
+class AccountsController < VersionController
+  include LightOperations::Flow
+  operation(
+    :accounts, # top level namespace
+    namespace: Operations, # Base namespace by default is Kernel
+    actions: [:create, :show], # those are operations executed by router
+    default_view: nil, # By changing this option you can have one method for render all successful operations for all actions.
+    view_prefix: 'render_', # By changing this you can have #view_create instead of #render_create
+    default_fail_view: nil, # By changing this option you can have one method for render all failed operations for all actions.
+    fail_view_prefix: 'render_fail_' # By changing this you can have #view_fail_create instead of #render_fail_create
+end
+```
+
+This simple module should give you power to create something like this:
+
+```ruby
+module Api
+  module V1
+    class AccountsController < VersionController
+      include LightOperations::Flow
+      skip_before_action :authorize, only: [:create, :password_reset]
+      operation :accounts,
+                namespace: Operations,
+                actions: [:create, :update, :show, :destroy, :password_reset],
+                default_fail_view: :render_error
+
+      private
+
+      def render_operation_error(op)
+        render json: op.errors, status: 422 # you can have status in operation if you want
+      end
+
+      def render_account(op)
+        render json: AccountOwnerSerializer.new(op.account), status: op.status
+      end
+
+      def render_no_content(_op)
+        render nothing: true, status: :no_content
+      end
+
+      alias_method :render_update, :render_account
+      alias_method :render_create, :render_account
+      alias_method :render_password_reset, :render_no_content
+      alias_method :render_destroy, :render_no_content
+    end
+  end
+end
+
+
+```
 
 ## Contributing
 
