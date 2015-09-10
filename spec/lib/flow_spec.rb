@@ -10,6 +10,7 @@ describe 'LightOperations::Flow', type: :controller do
   RailsApp.config.secret_key_base = '5308dcbbb7dea1b44e3d1d55ea7656f9'
   RailsApp.config.eager_load = false
   RailsApp.config.root = File.dirname(__FILE__)
+  RailsApp.config.generators { |g| g.test_framework :rspec }
   RailsApp.routes.draw do
     resources :accounts, only: [:create, :show, :update]
   end
