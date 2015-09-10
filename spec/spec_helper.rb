@@ -2,9 +2,6 @@ require 'bundler/setup'
 require 'awesome_print'
 Bundler.setup
 
-require 'coveralls'
-Coveralls.wear!
-
 require 'light_operations'
 
 RSpec.configure do |config|
