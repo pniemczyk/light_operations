@@ -2,6 +2,9 @@ require 'spec_helper'
 require 'action_controller/railtie'
 require 'action_view/railtie'
 require 'rspec/rails'
+# prevent Test::Unit's AutoRunner from executing during RSpec's rake task
+Test::Unit.run = true if defined?(Test::Unit) && Test::Unit.respond_to?(:run=)
+
 
 
 describe 'LightOperations::Flow', type: :controller do
