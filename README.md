@@ -207,13 +207,12 @@ Operation
 
 ```ruby
 class ArticleVoteBumperOperation < LightOperations::Core
-  rescue_from ActiveRecord::ActiveRecordError, with: :on_ar_error
+  rescue_from ActiveRecord::RecordInvalid, with: :on_ar_error
 
   def execute(_params = nil)
-    dependency(:article_model).tap do |article|
-      article.vote = article.vote.next
-      article.save
-    end
+    article = dependency(:article_model)
+    article.vote = article.vote.next
+    article.save!
     { success: true }
   end
 
@@ -228,16 +227,12 @@ Controller
 ```ruby
 class ArticleVotesController < ApplicationController
   def up
+    operation = ArticleVoteBumperOperation.new(article_model: article)
     response = operation.run.success? ? response.subject : response.errors
     render :up, json: response
   end
 
   private
-
-  def operation
-    @operation ||= ArticleVoteBumperOperation.new(article_model: article)
-  end
-
   def article
     Article.find(params.require(:id))
   end
