@@ -5,8 +5,8 @@
 [![Dependency Status](https://gemnasium.com/pniemczyk/light_operations.svg)](https://gemnasium.com/pniemczyk/light_operations)
 [![Code Climate](https://codeclimate.com/github/pniemczyk/light_operations/badges/gpa.svg)](https://codeclimate.com/github/pniemczyk/light_operations)
 
-When you want have slim controllers or some logic with several operations
-this gem could help you to have nice separated and clan code. CAN HELP YOU! :D
+When you want to have slim controllers or some logic with several operations
+this gem could help you to have nice separated and clean code. CAN HELP YOU! :D
 
 ## Installation
 
@@ -28,17 +28,17 @@ Or install it yourself as:
 
 ## How it works
 
-Basicly this is a Container for buissnes logic.
+Basically, this is a Container for business logic.
 
 You can define dependencies during initialization and run with custom parameters.
 When you define deferred actions on `success` and `fail` before operation execution is finished,
-after execution one of those action depend for execution result will be executed.
-Actions could be a block (Proc) or you could delgate execution to method other object,
-by binding operation with specific object with those methods.
+after execution one of those actions depend on for execution result will be executed.
+Actions could be a block (Proc) or you could delegate execution to method another object,
+by binding operation with the specific object with those methods.
 You also could use operation as simple execution and check status by `success?` or `fail?` method
 and then by using `subject` and `errors` method build your own logic to finish your result.
-There is many possible usecases where and how you could use operations.
-You can build csacade of opreations, use them one after the other,
+There are many possible use-cases where and how you could use operations.
+You can build cascade of operations, use them one after the other,
 use them recursively and a lot more.
 
 
@@ -132,7 +132,7 @@ MyOperation.new.on_success { |operation| render :done, locals: { model: operatio
 MyOperation.new.on(success: -> () { |operation| render :done, locals: { model: operation.subject } )
 ```
 
-When you bind operation with other object you could delegate actions to binded object methods
+When you bind operation with another object you could delegate actions to bound object methods
 
 ```ruby
 # 1
@@ -244,7 +244,7 @@ class ArticleVotesController < ApplicationController
 end
 ```
 
-#### Basic recursive execution to collect newsfeeds from 2 sources
+#### Basic recursive execution to collect news feeds from 2 sources
 
 Operation
 
@@ -486,7 +486,7 @@ class AuthController < ApplicationController
 end
 ```
 
-Register success and fails action is avialable by `#on` like :
+Register success and fails action is available by `#on` like:
 
 ```ruby
   def create
@@ -500,16 +500,16 @@ Operation have some helper methods (to improve recursive execution)
 - `#unbind!`                    => unbind binded object
 - `#clear_subject_with_errors!` => clear subject and errors
 
-When operation status is most importent we can simply use `#success?` or `#fail?` on the executed operation
+When operation status is most important we can simply use `#success?` or `#fail?` on the executed operation
 
 Errors are available by `#errors` after operation is executed
 
 ### Whats new in 1.2.x
-New module LightOperations::Flow which gives very simple and easy way to create operation per action in controller (tested on rails).
+New module LightOperations::Flow which gives very simple and easy way to create operation per action in the controller (tested on rails).
 
 #### How it works:
 
-include module in controller like this
+include the module in a controller like this
 ```ruby
 class AccountsController < VersionController
   include LightOperations::Flow
@@ -560,7 +560,7 @@ But it is not all :D (operation params gives you a lot more)
 class AccountsController < VersionController
   include LightOperations::Flow
   operation(
-    :accounts, # top level namespace
+    :accounts, # top-level namespace
     namespace: Operations, # Base namespace by default is Kernel
     actions: [:create, :show], # those are operations executed by router
     default_view: nil, # By changing this option you can have one method for render all successful operations for all actions.
@@ -570,7 +570,7 @@ class AccountsController < VersionController
 end
 ```
 
-This simple module should give you power to create something like this:
+This simple module should give you the power to create something like this:
 
 ```ruby
 module Api
