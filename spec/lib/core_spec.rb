@@ -226,7 +226,7 @@ describe LightOperations::Core do
     end
 
     it '#clear_subject_with_errors!' do
-      %w{ subject fail_errors errors }.each do |variable|
+      %w{subject fail_errors errors}.each do |variable|
         subject.instance_variable_set("@#{variable}", variable)
       end
       expect(subject.subject).to eq('subject')

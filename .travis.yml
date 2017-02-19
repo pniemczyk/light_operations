@@ -1,5 +1,4 @@
 language: ruby
 script: bundle exec rake
 rvm:
-  - 2.1.4
-  - 2.2.0
+  - 2.2.5
