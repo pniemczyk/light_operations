@@ -288,4 +288,21 @@ describe LightOperations::Core do
       subject.run(result: :success)
     end
   end
+
+  context 'Operation execution without params' do
+    subject do
+      subject_factory do
+        def execute
+          'hello world!'
+        end
+      end
+    end
+
+    it 'is allowed' do
+      subject
+        .bind_with(binding_object)
+        .on(success: :success_action, fail: :error_action)
+      expect(subject.run.success?).to eq(true)
+    end
+  end
 end
