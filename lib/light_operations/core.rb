@@ -8,7 +8,7 @@ module LightOperations
     attr_reader :subject
 
     def self.subject_name(method_name)
-      send(:define_method, method_name, proc { self.subject })
+      send(:define_method, method_name, proc { subject })
     end
 
     def initialize(dependencies = {})
@@ -55,7 +55,9 @@ module LightOperations
     end
 
     def clear_subject_with_errors!
-      @subject, @fail_errors, @errors = nil, nil, nil
+      @subject = nil
+      @fail_errors = nil
+      @errors = nil
       self
     end
 

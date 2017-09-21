@@ -7,7 +7,7 @@ module LightOperations
     attr_reader :operation_opts, :operation_dependencies
 
     module ClassMethods
-      def operation(operation_name, namespace: Kernel, actions: [], default_view: nil, view_prefix: 'render_', default_fail_view: nil, fail_view_prefix: 'render_fail_')
+      def operation(operation_name, namespace: Kernel, actions: [], default_view: nil, view_prefix: 'render_', default_fail_view: nil, fail_view_prefix: 'render_fail_') # rubocop:disable all
         actions.each do |action_name|
           operation_method = "#{action_name}_op"
 

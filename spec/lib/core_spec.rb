@@ -50,7 +50,7 @@ describe LightOperations::Core do
         end
       end
 
-      before { subject.on(success: lambda { |_subject| }) }
+      before { subject.on(success: ->(_subject) {}) }
 
       it 'is allowed when is initialized correctly' do
         expect { subject.run }.not_to raise_error
@@ -69,7 +69,7 @@ describe LightOperations::Core do
     context '.rescue_from specific error' do
       TestError = Class.new(StandardError)
 
-      before { subject.on(success: lambda { |_subject| }) }
+      before { subject.on(success: ->(_subject) {}) }
 
       context 'by block' do
         subject do
@@ -139,7 +139,7 @@ describe LightOperations::Core do
         end
 
         it 'when block is used' do
-          block_to_exec = lambda {}
+          block_to_exec = -> {}
           expect(block_to_exec).not_to receive(:call)
           subject.on_fail(&block_to_exec).run
         end
@@ -175,7 +175,7 @@ describe LightOperations::Core do
         end
 
         it 'when block is used' do
-          block_to_exec = lambda {}
+          block_to_exec = -> {}
           expect(block_to_exec).not_to receive(:call)
           subject.on_success(&block_to_exec).run
         end

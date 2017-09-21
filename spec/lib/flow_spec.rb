@@ -5,8 +5,6 @@ require 'rspec/rails'
 # prevent Test::Unit's AutoRunner from executing during RSpec's rake task
 Test::Unit.run = true if defined?(Test::Unit) && Test::Unit.respond_to?(:run=)
 
-
-
 describe 'LightOperations::Flow', type: :controller do
   RailsApp = Class.new(Rails::Application)
   RailsApp.config.secret_key_base = '5308dcbbb7dea1b44e3d1d55ea7656f9'
@@ -67,7 +65,6 @@ describe 'LightOperations::Flow', type: :controller do
       end
     end
 
-
     it '#render_create as success' do
       post :create, correct: true
       expect(response.body).to eq('Create OK')
@@ -94,7 +91,6 @@ describe 'LightOperations::Flow', type: :controller do
       end
     end
 
-
     it '#view_create as success' do
       post :create, correct: true
       expect(response.body).to eq('Create OK')
@@ -117,7 +113,6 @@ describe 'LightOperations::Flow', type: :controller do
         render text: op.subject, status: status
       end
     end
-
 
     it '#render_create as success' do
       post :create, correct: true
@@ -146,7 +141,6 @@ describe 'LightOperations::Flow', type: :controller do
         render text: op.subject, status: 422
       end
     end
-
 
     it '#render_view as success' do
       post :create, correct: true
@@ -185,7 +179,6 @@ describe 'LightOperations::Flow', type: :controller do
         { current_user: { id: params[:id] } }
       end
     end
-
 
     it '#render_view as success' do
       post :update, correct: true, id: 1

@@ -40,10 +40,11 @@ Documentation:
   Enabled: false
 
 Metrics/LineLength:
-  Max: 120
+  Max: 180
 
 AllCops:
   Exclude:
     - '**/Guardfile'
     - '**/model_operations.gemspec'
     - '**/spec/support/factory_helper.rb'
+    - '**/tmp/*.rb'
