@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   spec.add_runtime_dependency 'activesupport', '>= 3.0'
   spec.required_ruby_version = '>= 2.1.4'
-  spec.add_development_dependency 'rails', '~> 3.2'
+  spec.add_development_dependency 'rails', '~>  4.1'
   spec.add_development_dependency 'bundler', '~> 1.6'
   spec.add_development_dependency 'rake', '~> 10.4'
   spec.add_development_dependency 'rspec', '~> 3.3'
